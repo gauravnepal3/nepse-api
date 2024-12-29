@@ -4,7 +4,6 @@ import flask
 import requests
 from flask import Flask, request, send_file,Response
 import pandas as pd
-import numpy as np
 try:
     from nepse import Nepse
 except ImportError:
@@ -256,8 +255,7 @@ def getFiles() -> Response:
     try:
         args=request.args
         fetchID=args.get('fetchID')
-        # Fetch the PDF from the URL
-        response = requests.get(f"https://nepalstock.com.np/api/nots/application/fetchFiles?encryptedId={fetchID}",headers=nepse.getAuthorizationHeaders(),verify=False)
+        # Fetch the PDF from the URL/api/nots/application/fetchFiles?encryptedId={fetchID}",headers=nepse.getAuthorizationHeaders(),verify=False)
         response.raise_for_status()  # Raise an error for bad responses
 
         # Return the PDF file to the client

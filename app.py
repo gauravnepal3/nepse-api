@@ -80,7 +80,8 @@ routes = {
     "ScripDetails":"/security/<string:symbol>",
     "ScripSubDetails":"/sub-details/security/<string:detail>/<string:symbol>",
     "FileFetch":"/fetch-file",
-    'SaveDBAnalysis':'/save-db-analysis'
+    'SaveDBAnalysis':'/save-db-analysis',
+    "DailyFloorsheet":"/daily-floorsheet"
 }
 
 # Helper function for Momentum (10)
@@ -311,6 +312,13 @@ def getFloorsheet():
     save_floorsheet_to_csv(response.data)
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response
+
+@app.route(routes(["DailyFloorsheet"]))
+def getDailyFloorsheet():
+    response=flask.jsonify(nepse.getFloorSheet(show_progress=True))
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    return response
+
 
 def _getSummary():
     response = dict()
@@ -552,6 +560,7 @@ def getDailyScripPriceGraph():
     if param_scrip_name is None:
         raise ValueError("Error: 'symbol' argument is required")
     response = requests.get(f"https://www.onlinekhabar.com/smtm/ticker-page/chart/{param_scrip_name}/{timeframe}")
+    print(response)
     responseData=flask.jsonify(response.json())
     responseData.headers.add("Access-Control-Allow-Origin", "*")
     return responseData
@@ -724,45 +733,48 @@ def save_broker_share_analysis_to_postgres(df, conn):
         conn (psycopg2.connection): Connection to the PostgreSQL database.
     """
     try:
+        sectorWiseData = nepse.getCompanyList()
+        sector_map = {item['symbol']: item['sectorName'] for item in sectorWiseData}
+        df['sectorName'] = df['stockSymbol'].map(sector_map)
         # Calculate total shares bought by each broker per stock and date
-        bought_df = df.groupby(['buyerMemberId', 'stockSymbol', 'businessDate'])['contractQuantity'].sum().reset_index()
-        bought_df.rename(columns={'buyerMemberId': 'brokerId', 'contractQuantity': 'totalBought'}, inplace=True)
+        bought_df = df.groupby(['buyerMemberId', 'stockSymbol', 'businessDate','sectorName'])['contractQuantity'].sum().reset_index()
+        bought_df.rename(columns={'buyerMemberId': 'brokerId', 'contractQuantity': 'totalBought','sectorName':'sector'}, inplace=True)
 
-        bought_amount_df=df.groupby(['buyerMemberId','stockSymbol','businessDate'])['contractAmount'].sum().reset_index()
-        bought_amount_df.rename(columns={'buyerMemberId':'brokerId','contractAmount':'totalBoughtAmt'},inplace=True)
+        bought_amount_df=df.groupby(['buyerMemberId','stockSymbol','businessDate','sectorName'])['contractAmount'].sum().reset_index()
+        bought_amount_df.rename(columns={'buyerMemberId':'brokerId','contractAmount':'totalBoughtAmt','sectorName':'sector'},inplace=True)
 
-        bought_avg_df=df.groupby(['buyerMemberId','stockSymbol','businessDate'])['contractAmount'].mean().reset_index()
-        bought_avg_df.rename(columns={'buyerMemberId':'brokerId','contractAmount':'avgBoughtRate'},inplace=True)
+        bought_avg_df=df.groupby(['buyerMemberId','stockSymbol','businessDate','sectorName'])['contractAmount'].mean().reset_index()
+        bought_avg_df.rename(columns={'buyerMemberId':'brokerId','contractAmount':'avgBoughtRate','sectorName':'sector'},inplace=True)
 
         # Calculate total shares sold by each broker per stock and date
-        sold_df = df.groupby(['sellerMemberId', 'stockSymbol', 'businessDate'])['contractQuantity'].sum().reset_index()
-        sold_df.rename(columns={'sellerMemberId': 'brokerId', 'contractQuantity': 'totalSold'}, inplace=True)
+        sold_df = df.groupby(['sellerMemberId', 'stockSymbol', 'businessDate','sectorName'])['contractQuantity'].sum().reset_index()
+        sold_df.rename(columns={'sellerMemberId': 'brokerId', 'contractQuantity': 'totalSold','sectorName':'sector'}, inplace=True)
 
-        sell_amount_df=df.groupby(['sellerMemberId','stockSymbol','businessDate'])['contractAmount'].sum().reset_index()
-        sell_amount_df.rename(columns={'sellerMemberId':'brokerId','contractAmount':'totalSellAmt'},inplace=True)
+        sell_amount_df=df.groupby(['sellerMemberId','stockSymbol','businessDate','sectorName'])['contractAmount'].sum().reset_index()
+        sell_amount_df.rename(columns={'sellerMemberId':'brokerId','contractAmount':'totalSellAmt','sectorName':'sector'},inplace=True)
 
-        sell_avg_df=df.groupby(['sellerMemberId','stockSymbol','businessDate'])['contractAmount'].mean().reset_index()
-        sell_avg_df.rename(columns={'sellerMemberId':'brokerId','contractAmount':'avgSoldRate'},inplace=True)
+        sell_avg_df=df.groupby(['sellerMemberId','stockSymbol','businessDate','sectorName'])['contractAmount'].mean().reset_index()
+        sell_avg_df.rename(columns={'sellerMemberId':'brokerId','contractAmount':'avgSoldRate','sectorName':'sector'},inplace=True)
 
         # Merge the bought and sold DataFrames
         broker_analysis_df = bought_df.merge(
-            sold_df, on=['brokerId', 'stockSymbol', 'businessDate'], how='outer'
+            sold_df, on=['brokerId', 'stockSymbol','sector', 'businessDate'], how='outer'
         ).merge(
-            bought_amount_df, on=['brokerId', 'stockSymbol', 'businessDate'], how='outer'
+            bought_amount_df, on=['brokerId', 'stockSymbol','sector', 'businessDate'], how='outer'
         ).merge(
-            sell_amount_df, on=['brokerId', 'stockSymbol', 'businessDate'], how='outer'
+            sell_amount_df, on=['brokerId', 'stockSymbol','sector', 'businessDate'], how='outer'
         ).merge(
-            sell_avg_df, on=['brokerId', 'stockSymbol', 'businessDate'], how='outer'
+            sell_avg_df, on=['brokerId', 'stockSymbol','sector', 'businessDate'], how='outer'
         ).merge(
-            bought_avg_df, on=['brokerId', 'stockSymbol', 'businessDate'], how='outer'
+            bought_avg_df, on=['brokerId', 'stockSymbol','sector', 'businessDate'], how='outer'
         ).fillna(0)
 
         # Prepare the insert query
         insert_query = """
-        INSERT INTO broker_share_analysis (brokerId, stockSymbol, businessDate, totalBought, totalSold, "totalboughtAmt", "totalsoldAmt", "avgBoughtRate", "avgsoldRate")
+        INSERT INTO broker_share_analysis (brokerId, stockSymbol, businessDate,sector, totalBought, totalSold, "totalboughtAmt", "totalsoldAmt", "avgBoughtRate", "avgsoldRate")
         VALUES %s
         """
-
+        print(broker_analysis_df)
         # Prepare the data for insertion
         data_tuples = list(broker_analysis_df.itertuples(index=False, name=None))
 
@@ -774,6 +786,7 @@ def save_broker_share_analysis_to_postgres(df, conn):
         print("Data successfully inserted into the PostgreSQL database.")
 
     except Exception as e:
+        print(e)
         print("An error occurred while saving data to the database:", e)
         conn.rollback()
 

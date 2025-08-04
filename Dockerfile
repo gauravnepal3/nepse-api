@@ -16,14 +16,18 @@ WORKDIR /app
 # Copy files
 COPY requirements.txt requirements.txt
 
+# Make sure build tools are present
+RUN apt-get update && apt-get install -y build-essential python3-dev
+
 # Upgrade pip and tools
 RUN pip install --upgrade pip setuptools wheel
 
-# Install numpy separately
+# Install numpy first
 RUN pip install numpy
 
-# Disable isolated build for the rest (especially for pandas)
-RUN PIP_NO_BUILD_ISOLATION=1 pip install -r requirements.txt
+# Use binary-only install for requirements
+RUN pip install --only-binary=:all: -r requirements.txt
+
 
 
 # Copy the rest of the project

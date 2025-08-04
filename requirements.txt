@@ -8,5 +8,5 @@ Nepse==0.0.1
 psycopg2-binary==2.9.9
 httpx==0.28.1
 tqdm==4.67.1
-pywasm==1.0.8
+pywasm==1.1.0
 wasmer==1.1.0

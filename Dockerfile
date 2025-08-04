@@ -17,7 +17,7 @@ COPY . .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # Expose port
-EXPOSE 8000
+EXPOSE 3004
 
 # Run app
 CMD ["python", "app.py"]

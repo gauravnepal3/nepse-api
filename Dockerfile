@@ -17,7 +17,8 @@ WORKDIR /app
 COPY requirements.txt requirements.txt
 
 # Install numpy first to avoid build errors
-RUN pip install --upgrade pip && pip install numpy
+RUN pip install --upgrade pip && pip install numpy && pip install -r requirements.txt
+
 
 # Then install the rest
 RUN pip install -r requirements.txt

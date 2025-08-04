@@ -148,8 +148,7 @@ class TokenManager(_TokenManager):
 
 class TokenParser:
     def __init__(self):
-        # runtime = pywasm.core.Runtime()
-        # m = runtime.instance_from_file('example/fibonacci/bin/fibonacci.wasm')
+
         self.runtime = pywasm.load(f"{pathlib.Path(__file__).parent}/data/css.wasm")
 
     def parse_token_response(self, token_response):

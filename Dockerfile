@@ -27,6 +27,8 @@ RUN pip install --upgrade pip setuptools wheel
 # Install numpy first
 RUN pip install numpy
 
+RUN pip intall pywasm==1.0.8
+
 # Use binary-only install for requirements
 RUN pip install --only-binary=:all: -r requirements.txt
 

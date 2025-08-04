@@ -7,4 +7,4 @@ numpy==1.26.4
 Nepse==0.0.1
 psycopg2-binary==2.9.9
 httpx==0.28.1
-tqdm=4.67.1
+tqdm==4.67.1

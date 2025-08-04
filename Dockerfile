@@ -16,12 +16,15 @@ WORKDIR /app
 # Copy files
 COPY requirements.txt requirements.txt
 
-# Install numpy first to avoid build errors
-RUN pip install --upgrade pip && pip install numpy && pip install -r requirements.txt
+# Upgrade pip and tools
+RUN pip install --upgrade pip setuptools wheel
 
+# Install numpy separately
+RUN pip install numpy
 
-# Then install the rest
-RUN pip install -r requirements.txt
+# Disable isolated build for the rest (especially for pandas)
+RUN PIP_NO_BUILD_ISOLATION=1 pip install -r requirements.txt
+
 
 # Copy the rest of the project
 COPY . .

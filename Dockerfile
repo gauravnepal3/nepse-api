@@ -13,6 +13,8 @@ RUN apt-get update && apt-get install -y \
 # Set work directory
 WORKDIR /app
 
+COPY . /app
+
 # Copy files
 COPY requirements.txt requirements.txt
 

@@ -3,5 +3,5 @@ requests==2.26.0
 pandas==2.3.1
 beautifulsoup4==4.10.0
 lxml==5.4.0
-numpy==1.24.0
+numpy==2.3.2
 Nepse==0.0.1

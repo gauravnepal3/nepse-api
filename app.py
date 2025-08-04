@@ -313,11 +313,19 @@ def getFloorsheet():
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response
 
-@app.route(routes(["DailyFloorsheet"]))
+@app.route(routes["DailyFloorsheet"])
 def getDailyFloorsheet():
-    response=flask.jsonify(nepse.getFloorSheet(show_progress=True))
-    response.headers.add("Access-Control-Allow-Origin", "*")
-    return response
+    args=request.args
+    limit=args.get('limit',500)
+    page = args.get('page', 1)
+    url = f"{nepse.api_end_points['floor_sheet']}?&businessDate=size={limit}&page={page}&sort=contractId,desc"
+    response=nepse.requestPOSTAPI(
+        url=url,
+        payload_generator=nepse.getPOSTPayloadIDForFloorSheet,
+    )
+    responseData=flask.jsonify(response)
+    responseData.headers.add("Access-Control-Allow-Origin", "*")
+    return responseData
 
 
 def _getSummary():
